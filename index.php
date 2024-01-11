@@ -1,40 +1,31 @@
 <?php 
 
-require 'koneksi.php';
+require '../koneksi.php';
 
 session_start();
-if (!$_SESSION["masuk"]) {
-	header("Location: login.php");
+if (!isset($_SESSION["admin"])) {
+	header("Location: admin.php");
 	exit;
 }
 
-$nama = $_SESSION["nama"];
-$nim = $_SESSION["nim"];
-$getUser = mysqli_query($conn, "SELECT * FROM user WHERE nama = '$nama' ");
-while ($siswa = mysqli_fetch_array($getUser)) {
-	$no = $siswa["no"];
-	$kelas = $siswa["kelas"];
-}
-
-if (isset($_POST["absen"])) {
-	date_default_timezone_set('Asia/Jakarta');
-	$waktu = date("H:i");
-	$tanggal = gmdate("d/m/y", time()+60*60*7);
-	$keterangan = htmlspecialchars($_POST["keterangan"]);
-	$cek = mysqli_query($conn, "SELECT * FROM absensi WHERE nim = '$nim' and tanggal = '$tanggal' ");
-	$limit = "12:00";
-	if ($waktu > $limit) {
-		echo "<script>alert('Absensi gagal karena anda melewati batas waktu jam ');document.location='index.php';</script>";	
-	} else if (strlen($keterangan) > 8) {
-		echo "<script>alert('Keterangan tidak boleh lebih dari 8 kata');document.location='index.php';</script>";
-	} else if (mysqli_num_rows($cek) === 1) {
-		echo "<script>alert('Absensi hanya bisa dilakukan satu kali sehari');document.location='index.php';</script>";
+if (isset($_POST["tambah"])) {
+	$nama = htmlspecialchars($_POST["nama"]);
+	$password = htmlspecialchars($_POST["password"]);
+	$no = htmlspecialchars($_POST["no"]);
+	$kelas = htmlspecialchars($_POST["kelas"]);
+	$query = mysqli_query($conn, "INSERT INTO user VALUES('', '$nama', '$password', '$no', '$kelas')"); 
+	if ($query) {
+		echo "<script>alert('Data Berhasil Ditambahkan');document.location='index.php';</script>";
+		exit;
 	} else {
-		$query = mysqli_query($conn, "INSERT INTO absensi VALUES('', '$nama', '$nim', '$no', '$kelas', '$waktu', '$tanggal', '$keterangan')");
-		echo "<script>alert('Absensi Berhasil');document.location='index.php';</script>";
+		echo "<script>alert('Data Gagal Ditambahkan');document.location='index.php.php';</script>";
 	}
 }
 
+// Jumlah Siswa
+
+$getjumlah = mysqli_query($conn, "SELECT * FROM user");
+$jumlahsiswa = mysqli_num_rows($getjumlah);
 
 ?>
 <!DOCTYPE html>
@@ -42,8 +33,8 @@ if (isset($_POST["absen"])) {
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-	<title>Absensi</title>
-	<link rel="stylesheet" type="text/css" href="css/materialize.css">
+	<title>Siswa</title>
+	<link rel="stylesheet" type="text/css" href="../css/materialize.css">
 	<link rel="stylesheet" type="text/css" href="css/style.css">
 	<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
@@ -55,7 +46,10 @@ if (isset($_POST["absen"])) {
 	          		<a href="#!" class="brand-logo left">Absensi</a>
 	          		<a href="#" data-target="mobile-demo" class="sidenav-trigger right"><i class="material-icons black-text right">menu</i></a>
 	          		<ul class="right hide-on-med-and-down">
-	             		<li><a href="">Absensi</a></li>
+	          			<li><a href="account.php">Admin</a></li>
+	             		<li><a href="#">Siswa</a></li>
+	              		<li><a href="absensi.php">Absensi</a></li>
+	              		<li><a href="riwayat.php">Riwayat Absensi</a></li>
 	              		<li><a href="logout.php">Keluar</a></li>
 	          		</ul>
 	        	</div>
@@ -63,60 +57,77 @@ if (isset($_POST["absen"])) {
 	    </nav>
   	</div>
 	<ul class="sidenav" id="mobile-demo">
-		<li><a href="">Absensi</a></li>
+		<li><a href="account.php">Admin</a></li>
+	    <li><a href="#">Siswa</a></li>
+	    <li><a href="absensi.php">Absensi</a></li>
+	   	<li><a href="riwayat.php">Riwayat Absensi</a></li>
 	    <li><a href="logout.php">Keluar</a></li>
   	</ul>
   	<div class="header">
   		<div class="container">
-  			<button data-target="absen" class="modal-trigger">Tambah Absensi</button>
+  			<div class="row">
+  				<div class="col 4">
+  					<button data-target="absen" class="modal-trigger">Tambah Siswa</button>
+  				</div>
+  				<div class="col 8">
+  					<h6>Jumlah Siswa: <?= $jumlahsiswa; ?></h6>
+  				</div>
+  			</div>
+  			
   		</div>
   	</div>
   	<div class="main">
   		<div class="container">
-  			<table class="table">
+  			<table class="table striped">
   				<thead>
   					<tr>
   						<th>Nama</th>
-  						<th>Tanggal</th>
-  						<th>Waktu</th>
-  						<th>Keterangan</th>
+  						<th>Nim</th>
+  						<th>No Absen</th>
+  						<th>Kelas</th>
+  						<th>Aksi</th>
   					</tr>
   				</thead>
   				<tbody>
-  					<?php 
-  						$showData = mysqli_query($conn, "SELECT * FROM absensi WHERE nama = '$nama' ");
-  						while ($absensi = mysqli_fetch_array($showData)) {
-  					?>
+  					<?php  
+  						$show = mysqli_query($conn, "SELECT * FROM user ORDER BY no ASC");
+  						while ($siswa = mysqli_fetch_array($show)) {
+
+  				 	?>
 	  					<tr>
-	  						<td><?= $absensi["nama"]; ?></td>
-	  						<td><?= $absensi["tanggal"]; ?></td>
-	  						<td><?= $absensi["waktu"]; ?> WIB</td>
-	  						<td><?= ucfirst($absensi["keterangan"]); ?></td>
+	  						<td><?= $siswa["nama"]; ?></td>
+	  						<td><?= $siswa["password"]; ?></td>
+	  						<td><?= $siswa["no"]; ?></td>
+	  						<td><?= $siswa["kelas"]; ?></td>
+	  						<td>
+	  							<a onclick="return confirm('Yakin untuk dihapus?');" href="delete.php?id=<?= $siswa["id"]; ?>">Hapus</a> | 
+	  							<a href="edit.php?id=<?= $siswa["id"]; ?>">Edit</a>
+	  						</td>
 	  					</tr>
-	  				<?php
-  						}
-  					?>
+	  				<?php 
+	  					}
+	  				?>
   				</tbody>
   			</table>
   		</div>
   	</div
 
-  	<!-- modal --!>
+  	<!-- modal -->
 
 	<div id="absen" class="modal">
 		<div class="modal-content">
-			<p>Masukkan keterangan absen dibawah ini</p>
+			<h3>Tambah Siswa</h3>
 			<form method="post">
-				<input type="text" name="keterangan" placeholder="Keterangan hadir/sakit/izin/dll">
-				<button class="cancel">Batal</button>
-				<button class="accept" type="submit" name="absen">Absen</button>
+				<input type="text" name="nama" placeholder="Nama Siswa" autocomplete="off" required>
+				<input type="text" name="password" placeholder="Nim Siswa" autocomplete="off" required>
+				<input type="number" name="no" placeholder="No Absen" autocomplete="off" required> 
+				<input type="text" name="kelas" placeholder="Kelas Siswa" autocomplete="off" required>
+				<button type="submit" name="tambah" class="button-form">Tambah Data</button>
 			</form>
 		</div>
 	</div>
-
-
-	<script src="js/jquery.min.js"></script>
-	<script src="js/materialize.js"></script>
+	<script src="../js/jquery.min.js"></script>
+	<script src="../js/materialize.js"></script>
 	<script>
 		$(document).ready(function(){
 			$('.sidenav').sidenav();
